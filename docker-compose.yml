@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  pdv-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pdvanotafacil-web
+    restart: always
+    ports:
+      - "80:80"
