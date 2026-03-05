@@ -26,12 +26,19 @@ if ! command -v docker &> /dev/null; then
     systemctl start docker
 fi
 
-# 3. Preparar diretório do site
+# 3. Liberar Porta 80
+echo "-> Parando e desativando web servers nativos para liberar a porta 80..."
+systemctl stop nginx || true
+systemctl disable nginx || true
+systemctl stop apache2 || true
+systemctl disable apache2 || true
+
+# 4. Preparar diretório do site
 echo "-> Preparando diretório $DIRETORIO_SITE..."
 mkdir -p "$DIRETORIO_SITE"
 cd "$DIRETORIO_SITE"
 
-# 4. Clonar ou atualizar código do GitHub
+# 5. Clonar ou atualizar código do GitHub
 if [ -d ".git" ]; then
     echo "-> Repositório já existe. Atualizando código (git pull)..."
     git checkout main
