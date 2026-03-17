@@ -9,12 +9,16 @@ import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 
 const ReceiptPage = () => {
-  const { items, totalPrice, clearCart } = useCart();
+  const { clearCart } = useCart();
   const { storeName, pixKey, pixKeyType, pixKeyFormatted } = useStore();
   const { getUnitShort } = useProducts();
   const navigate = useNavigate();
   const location = useLocation();
-  const paymentMethod = (location.state as any)?.paymentMethod || "";
+  const state = (location.state as any) || {};
+  const paymentMethod = state.paymentMethod || "";
+  // Use snapshotted values from navigation state (captured before cart cleared)
+  const items = state.items || [];
+  const totalPrice: number = parseFloat(state.totalPrice) || 0;
 
   const now = useMemo(() => new Date(), []);
   const dateStr = now.toLocaleDateString("pt-BR");

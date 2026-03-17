@@ -6,9 +6,11 @@ import { useProducts } from "@/contexts/ProductContext";
 import { useCustomers, type Customer } from "@/contexts/CustomerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSales } from "@/contexts/SaleContext";
+import { useStore, PIX_TYPE_LABELS } from "@/contexts/StoreContext";
 import { Button } from "@/components/ui/button";
 import CustomerSelectModal from "@/components/pdv/CustomerSelectModal";
 import AdminAuthModal from "@/components/pdv/AdminAuthModal";
+import { QRCodeSVG } from "qrcode.react";
 
 const PAYMENT_METHODS = [
   { id: "dinheiro", label: "Dinheiro", icon: Banknote, description: "Pagamento em espécie" },
@@ -30,6 +32,7 @@ const CheckoutPage = () => {
   const { updateProduct } = useProducts();
   const { user } = useAuth();
   const { addSale } = useSales();
+  const { pixKey, storeName } = useStore();
   const navigate = useNavigate();
 
   const isAPrazo = selectedMethod === "a_prazo";
@@ -108,8 +111,17 @@ const CheckoutPage = () => {
           await updateProduct(item.product.id, { stock: Math.max(0, item.product.stock - item.quantity) });
         }
 
+        // Navigate with snapshot of total and items BEFORE clearing the cart
+        navigate("/receipt", {
+          state: {
+            paymentMethod: selectedMethod,
+            customerName: selectedCustomer?.name,
+            totalPrice: totalPrice,
+            items: items,
+          }
+        });
+        // Clear cart after navigating so receipt page can read state
         clearCart();
-        navigate("/receipt", { state: { paymentMethod: selectedMethod, customerName: selectedCustomer?.name } });
     } catch (error) {
         console.error("Erro ao finalizar venda", error);
         alert("Erro ao finalizar venda. Verifique a conexão com o banco de dados.");
@@ -181,6 +193,20 @@ const CheckoutPage = () => {
             );
           })}
         </div>
+
+        {/* Pix QR Code — shown when PIX is selected */}
+        {selectedMethod === "pix" && pixKey && (
+          <div className="mt-5 bg-card rounded-2xl p-5 border border-border shadow-soft flex flex-col items-center gap-3">
+            <p className="text-sm font-semibold text-foreground font-body">Mostre o QR Code para o cliente</p>
+            <QRCodeSVG
+              value={`00020126330014BR.GOV.BCB.PIX0111${pixKey.replace(/[\s.\-/()]/g, "")}5204000053039865404${totalPrice.toFixed(2)}5802BR5913${storeName.slice(0, 25)}6009SAO PAULO62070503***6304`}
+              size={160}
+              level="M"
+            />
+            <p className="text-xs text-muted-foreground font-body font-mono">{pixKey}</p>
+            <p className="text-sm font-bold text-primary font-display">{"R$ " + totalPrice.toFixed(2).replace(".", ",")}</p>
+          </div>
+        )}
 
         {/* A Prazo: Customer Info */}
         {isAPrazo && (
