@@ -75,6 +75,7 @@ app.post('/api/products', async (req, res) => {
         );
         res.json({ success: true, id });
     } catch (error) {
+        console.error('Error saving product:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -100,13 +101,17 @@ app.get('/api/categories', async (req, res) => {
 
 app.post('/api/categories', async (req, res) => {
     try {
-        const { id, name, color } = req.body;
+        const { id, name, color, icon } = req.body;
+        // Certificar que a tabela tem a coluna icon (migration simples)
+        await pool.query('ALTER TABLE categories ADD COLUMN IF NOT EXISTS icon VARCHAR(50)');
+        
         await pool.query(
-            'INSERT INTO categories (id, name, color) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name), color=VALUES(color)',
-            [id, name, color]
+            'INSERT INTO categories (id, name, color, icon) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name), color=VALUES(color), icon=VALUES(icon)',
+            [id, name, color, icon]
         );
         res.json({ success: true, id });
     } catch (error) {
+        console.error('Error saving category:', error);
         res.status(500).json({ error: error.message });
     }
 });

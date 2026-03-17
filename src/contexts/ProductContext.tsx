@@ -85,8 +85,9 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         }
     } catch (e) {
         console.error("Failed to save product to DB", e);
-        alert("Erro ao salvar produto no banco de dados. Verifique se a categoria existe.");
+        // Remove optimistic update if save fails
         setProducts((prev) => prev.filter(p => p.id !== tempId));
+        throw e;
     }
   }, []);
 

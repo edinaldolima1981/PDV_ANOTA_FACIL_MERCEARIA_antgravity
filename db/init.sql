@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS units (
 CREATE TABLE IF NOT EXISTS categories (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    color VARCHAR(20) NOT NULL
+    color VARCHAR(20) NOT NULL,
+    icon VARCHAR(50)
 );
 
 -- Tabela de Produtos

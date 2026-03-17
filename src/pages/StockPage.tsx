@@ -83,18 +83,31 @@ const StockPage = () => {
     toast.success("Produto excluído!");
   };
 
-  const handleAddProduct = () => {
-    if (!newName.trim() || !newPrice.trim()) return;
-    addProduct({
-      name: newName.trim(),
-      price: parseFloat(newPrice) || 0,
-      stock: parseInt(newStock) || 0,
-      unit: newUnit,
-      category: newCategory || (categories[1]?.id || ""),
-    });
-    toast.success("Produto cadastrado!");
-    setNewName(""); setNewPrice(""); setNewStock(""); setNewUnit("un"); setNewCategory("");
-    setShowAddModal(false);
+  const handleAddProduct = async () => {
+    if (!newName.trim() || !newPrice.trim()) {
+      toast.error("Preencha o nome e o preço do produto.");
+      return;
+    }
+    
+    if (!newCategory.trim()) {
+      toast.error("Selecione uma categoria para o produto.");
+      return;
+    }
+
+    try {
+      await addProduct({
+        name: newName.trim(),
+        price: parseFloat(newPrice) || 0,
+        stock: parseInt(newStock) || 0,
+        unit: newUnit,
+        category: newCategory,
+      });
+      toast.success("Produto cadastrado com sucesso!");
+      setNewName(""); setNewPrice(""); setNewStock(""); setNewUnit("un"); setNewCategory("");
+      setShowAddModal(false);
+    } catch (error) {
+      toast.error("Erro ao cadastrar produto. Tente novamente.");
+    }
   };
 
   const handleAddUnit = () => {
