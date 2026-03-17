@@ -10,8 +10,6 @@ services:
       MYSQL_DATABASE: pdv_db
       MYSQL_USER: pdv_user
       MYSQL_PASSWORD: pdv_password
-    ports:
-      - "3306:3306"
     volumes:
       - pdv_data:/var/lib/mysql
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
