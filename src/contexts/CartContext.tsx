@@ -1,4 +1,4 @@
-import { useState, createContext, useContext, useCallback, type ReactNode } from "react";
+import { useState, useEffect, createContext, useContext, useCallback, type ReactNode } from "react";
 import type { CartItem, Product } from "@/data/products";
 import type { Customer } from "@/contexts/CustomerContext";
 
@@ -17,8 +17,17 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    const saved = localStorage.getItem("pdv_cart_items");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(() => {
+    const saved = localStorage.getItem("pdv_cart_customer");
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  useEffect(() => { localStorage.setItem("pdv_cart_items", JSON.stringify(items)); }, [items]);
+  useEffect(() => { localStorage.setItem("pdv_cart_customer", JSON.stringify(selectedCustomer)); }, [selectedCustomer]);
 
   const addItem = useCallback((product: Product, quantity: number) => {
     setItems((prev) => {

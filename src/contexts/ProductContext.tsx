@@ -1,6 +1,6 @@
-import { useState, createContext, useContext, useCallback, type ReactNode } from "react";
+import { useState, useEffect, createContext, useContext, useCallback, type ReactNode } from "react";
 import type { Product, Category } from "@/data/products";
-import { MOCK_PRODUCTS, CATEGORIES as DEFAULT_CATEGORIES } from "@/data/products";
+import { api } from "@/lib/api";
 
 export interface CustomUnit {
   id: string;
@@ -21,7 +21,6 @@ const DEFAULT_UNITS: CustomUnit[] = [
   { id: "cx", label: "Caixa", short: "cx" },
 ];
 
-// Keep backward-compatible exports
 export type ProductUnit = string;
 
 export const UNIT_LABELS: Record<string, string> = {};
@@ -44,30 +43,69 @@ interface ProductContextType {
   addUnit: (unit: Omit<CustomUnit, "id">) => void;
   deleteUnit: (id: string) => void;
   getUnitShort: (id: string) => string;
+  isLoading: boolean;
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
 export const ProductProvider = ({ children }: { children: ReactNode }) => {
-  const [products, setProducts] = useState<Product[]>([...MOCK_PRODUCTS]);
-  const [categories, setCategories] = useState<Category[]>([...DEFAULT_CATEGORIES]);
-  const [units, setUnits] = useState<CustomUnit[]>([...DEFAULT_UNITS]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [units, setUnits] = useState<CustomUnit[]>(DEFAULT_UNITS);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const addProduct = useCallback((product: Omit<Product, "id">) => {
-    const id = `p${Date.now()}`;
-    setProducts((prev) => [...prev, { ...product, id } as Product]);
+  useEffect(() => {
+    Promise.all([
+      api.get('/products').catch(() => []),
+      api.get('/categories').catch(() => [])
+    ])
+    .then(([fetchedProducts, fetchedCategories]) => {
+      setProducts(fetchedProducts || []);
+      setCategories(fetchedCategories || []);
+    })
+    .finally(() => setIsLoading(false));
   }, []);
 
-  const updateProduct = useCallback((id: string, data: Partial<Product>) => {
+  const addProduct = useCallback(async (product: Omit<Product, "id">) => {
+    const tempId = `p${Date.now()}`;
+    const newProduct = { ...product, id: tempId } as Product;
+    // Optimistic UI update
+    setProducts((prev) => [...prev, newProduct]);
+    
+    try {
+        const res = await api.post('/products', newProduct);
+        if (res.id && res.id !== tempId) {
+             setProducts((prev) => prev.map(p => p.id === tempId ? { ...p, id: res.id } : p));
+        }
+    } catch (e) {
+        console.error("Failed to save product to DB", e);
+    }
+  }, []);
+
+  const updateProduct = useCallback(async (id: string, data: Partial<Product>) => {
     setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...data } : p)));
-  }, []);
+    try {
+        const productToUpdate = products.find(p => p.id === id);
+        if (productToUpdate) {
+            await api.post('/products', { ...productToUpdate, ...data });
+        }
+    } catch (e) {
+        console.error("Failed to update product in DB", e);
+    }
+  }, [products]);
 
-  const deleteProduct = useCallback((id: string) => {
+  const deleteProduct = useCallback(async (id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
+    try {
+        await api.delete(`/products/${id}`);
+    } catch (e) {
+        console.error("Failed to delete product from DB", e);
+    }
   }, []);
 
   const addCategory = useCallback((category: Category) => {
     setCategories((prev) => [...prev, category]);
+    // DB categories normally read-only from migration, but UI allows. Assuming local for now if not supported in API fully.
   }, []);
 
   const updateCategory = useCallback((id: string, data: Partial<Category>) => {
@@ -82,7 +120,6 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
     const id = `u_${unit.short.toLowerCase().replace(/[^a-z0-9]/g, "")}${Date.now()}`;
     const newUnit = { ...unit, id };
     setUnits((prev) => [...prev, newUnit]);
-    // Update global maps for backward compat
     UNIT_LABELS[id] = unit.label;
     UNIT_SHORT[id] = unit.short;
   }, []);
@@ -98,7 +135,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <ProductContext.Provider
-      value={{ products, categories, units, addProduct, updateProduct, deleteProduct, addCategory, updateCategory, deleteCategory, addUnit, deleteUnit, getUnitShort }}
+      value={{ products, categories, units, addProduct, updateProduct, deleteProduct, addCategory, updateCategory, deleteCategory, addUnit, deleteUnit, getUnitShort, isLoading }}
     >
       {children}
     </ProductContext.Provider>

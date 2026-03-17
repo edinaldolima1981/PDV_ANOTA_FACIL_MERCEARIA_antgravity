@@ -1,6 +1,43 @@
 version: '3.8'
 
 services:
+  pdv-db:
+    image: mysql:8.0
+    container_name: pdvanotafacil-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: pdv_db
+      MYSQL_USER: pdv_user
+      MYSQL_PASSWORD: pdv_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - pdv_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  pdv-api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: pdvanotafacil-api
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - DB_HOST=pdv-db
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - DB_NAME=pdv_db
+      - PORT=3001
+    depends_on:
+      pdv-db:
+        condition: service_healthy
+
   pdv-frontend:
     build:
       context: .
@@ -9,3 +46,9 @@ services:
     restart: always
     ports:
       - "80:80"
+    depends_on:
+      - pdv-api
+
+volumes:
+  pdv_data:
+

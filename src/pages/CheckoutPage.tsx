@@ -71,46 +71,51 @@ const CheckoutPage = () => {
     return true;
   };
 
-  const handleFinalize = () => {
+  const handleFinalize = async () => {
     if (!canFinalize()) return;
     setProcessing(true);
 
-    if (isAPrazo && selectedCustomer) {
-      addCreditSale({
-        customerId: selectedCustomer.id,
-        customerName: selectedCustomer.name,
-        amount: totalPrice,
-        ...(adminOverrideGranted ? {
-          adminOverride: {
-            adminId: "admin-001",
-            date: new Date().toISOString(),
-            amountOverLimit: totalPrice - (creditCheck?.disponivel || 0),
-            reason: "Liberação manual pelo administrador",
-          }
-        } : {}),
-      });
+    try {
+        if (isAPrazo && selectedCustomer) {
+          await addCreditSale({
+            customerId: selectedCustomer.id,
+            customerName: selectedCustomer.name,
+            amount: totalPrice,
+            ...(adminOverrideGranted ? {
+              adminOverride: {
+                adminId: "admin-001",
+                date: new Date().toISOString(),
+                amountOverLimit: totalPrice - (creditCheck?.disponivel || 0),
+                reason: "Liberação manual pelo administrador",
+              }
+            } : {}),
+          });
+        }
+
+        // Register the sale in historical context
+        await addSale({
+          items,
+          total: totalPrice,
+          paymentMethod: selectedMethod || "desconhecido",
+          operatorId: user?.id || "unknown",
+          operatorName: user?.name || "Operador Desconhecido",
+          customerId: selectedCustomer?.id,
+          customerName: selectedCustomer?.name,
+        });
+
+        // Decrement stock for each item sold
+        for (const item of items) {
+          await updateProduct(item.product.id, { stock: Math.max(0, item.product.stock - item.quantity) });
+        }
+
+        clearCart();
+        navigate("/receipt", { state: { paymentMethod: selectedMethod, customerName: selectedCustomer?.name } });
+    } catch (error) {
+        console.error("Erro ao finalizar venda", error);
+        alert("Erro ao finalizar venda. Verifique a conexão com o banco de dados.");
+    } finally {
+        setProcessing(false);
     }
-
-    // Register the sale in historical context
-    addSale({
-      items,
-      total: totalPrice,
-      paymentMethod: selectedMethod || "desconhecido",
-      operatorId: user?.id || "unknown",
-      operatorName: user?.name || "Operador Desconhecido",
-      customerId: selectedCustomer?.id,
-      customerName: selectedCustomer?.name,
-    });
-
-    // Decrement stock for each item sold
-    items.forEach(({ product, quantity }) => {
-      updateProduct(product.id, { stock: Math.max(0, product.stock - quantity) });
-    });
-
-    setTimeout(() => {
-      clearCart();
-      navigate("/receipt", { state: { paymentMethod: selectedMethod, customerName: selectedCustomer?.name } });
-    }, 1200);
   };
 
   return (

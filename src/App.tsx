@@ -19,7 +19,9 @@ import FiadoPage from "./pages/FiadoPage";
 import ReportsPage from "./pages/ReportsPage";
 import AdminPage from "./pages/AdminPage";
 import ContasReceberPage from "./pages/ContasReceberPage";
+import SuperAdminPanel from "./pages/sysadmin/SuperAdminPanel";
 import NotFound from "./pages/NotFound";
+import { SysAdminProvider } from "./contexts/SysAdminContext";
 
 const queryClient = new QueryClient();
 
@@ -32,23 +34,26 @@ const App = () => (
             <ProductProvider>
               <AuthProvider>
                 <SaleProvider>
-                  <Toaster />
-                  <Sonner />
-                  <BrowserRouter>
-                    <Routes>
-                      <Route path="/" element={<LoginPin />} />
-                      <Route path="/home" element={<SalesHome />} />
-                      <Route path="/cart" element={<CartPage />} />
-                      <Route path="/checkout" element={<CheckoutPage />} />
-                      <Route path="/receipt" element={<ReceiptPage />} />
-                      <Route path="/stock" element={<StockPage />} />
-                      <Route path="/fiado" element={<FiadoPage />} />
-                      <Route path="/contas-receber" element={<ContasReceberPage />} />
-                      <Route path="/reports" element={<ReportsPage />} />
-                      <Route path="/admin" element={<AdminPage />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </BrowserRouter>
+                  <SysAdminProvider>
+                    <Toaster />
+                    <Sonner />
+                    <BrowserRouter>
+                      <Routes>
+                        <Route path="/" element={<LoginPin />} />
+                        <Route path="/home" element={<SalesHome />} />
+                        <Route path="/cart" element={<CartPage />} />
+                        <Route path="/checkout" element={<CheckoutPage />} />
+                        <Route path="/receipt" element={<ReceiptPage />} />
+                        <Route path="/stock" element={<StockPage />} />
+                        <Route path="/fiado" element={<FiadoPage />} />
+                        <Route path="/contas-receber" element={<ContasReceberPage />} />
+                        <Route path="/reports" element={<ReportsPage />} />
+                        <Route path="/admin" element={<AdminPage />} />
+                        <Route path="/sysadmin/painel" element={<SuperAdminPanel />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </BrowserRouter>
+                  </SysAdminProvider>
                 </SaleProvider>
               </AuthProvider>
             </ProductProvider>

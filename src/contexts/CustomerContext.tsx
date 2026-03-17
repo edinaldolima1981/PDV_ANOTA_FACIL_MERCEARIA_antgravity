@@ -1,4 +1,5 @@
-import { useState, createContext, useContext, useCallback, type ReactNode } from "react";
+import { useState, useEffect, createContext, useContext, useCallback, type ReactNode } from "react";
+import { api } from "@/lib/api";
 
 export interface Customer {
   id: string;
@@ -40,45 +41,58 @@ interface CustomerContextType {
   customers: Customer[];
   creditSales: CreditSale[];
   adminLogs: AdminLog[];
-  addCustomer: (customer: Omit<Customer, "id" | "valor_em_aberto">) => Customer;
+  addCustomer: (customer: Omit<Customer, "id" | "valor_em_aberto">) => Promise<Customer>;
   getCustomer: (id: string) => Customer | undefined;
   getCreditoDisponivel: (customerId: string) => number;
-  addCreditSale: (sale: Omit<CreditSale, "id" | "date" | "dueDate" | "status">) => CreditSale;
+  addCreditSale: (sale: Omit<CreditSale, "id" | "date" | "dueDate" | "status">) => Promise<CreditSale>;
   receiveSalePayment: (saleId: string, paymentMethod: string) => void;
   updateCustomerLimit: (customerId: string, newLimit: number, adminId: string) => void;
   logAdminAction: (adminId: string, action: string, details: string) => void;
   checkCreditAvailable: (customerId: string, amount: number) => { available: boolean; limite: number; emAberto: number; disponivel: number };
+  isLoading: boolean;
 }
 
 const CustomerContext = createContext<CustomerContextType | undefined>(undefined);
 
-const INITIAL_CUSTOMERS: Customer[] = [
-  { id: "c1", name: "Maria Silva", phone: "(11) 99999-1234", limite_credito: 500, valor_em_aberto: 87.50 },
-  { id: "c2", name: "João Santos", phone: "(11) 98888-5678", limite_credito: 300, valor_em_aberto: 156.30 },
-  { id: "c3", name: "Ana Oliveira", phone: "(11) 97777-9012", limite_credito: 200, valor_em_aberto: 0 },
-  { id: "c4", name: "Carlos Ferreira", phone: "(11) 96666-3456", limite_credito: 150, valor_em_aberto: 32.90 },
-];
-
-const INITIAL_CREDIT_SALES: CreditSale[] = [
-  { id: "cs1", customerId: "c1", customerName: "Maria Silva", date: "2026-02-28", dueDate: "2026-03-30", amount: 45.00, status: "pendente" },
-  { id: "cs2", customerId: "c1", customerName: "Maria Silva", date: "2026-02-25", dueDate: "2026-03-27", amount: 42.50, status: "pendente" },
-  { id: "cs3", customerId: "c2", customerName: "João Santos", date: "2026-03-03", dueDate: "2026-04-02", amount: 89.80, status: "pendente" },
-  { id: "cs4", customerId: "c2", customerName: "João Santos", date: "2026-02-27", dueDate: "2026-03-29", amount: 66.50, status: "atrasado" },
-  { id: "cs5", customerId: "c4", customerName: "Carlos Ferreira", date: "2026-03-04", dueDate: "2026-04-03", amount: 32.90, status: "pendente" },
-];
-
 export const CustomerProvider = ({ children }: { children: ReactNode }) => {
-  const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
-  const [creditSales, setCreditSales] = useState<CreditSale[]>(INITIAL_CREDIT_SALES);
-  const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [creditSales, setCreditSales] = useState<CreditSale[]>([]);
+  const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]); // Admin logs could also be moved to DB later, keeping local/mixed for now
+  const [isLoading, setIsLoading] = useState(true);
 
-  const addCustomer = useCallback((data: Omit<Customer, "id" | "valor_em_aberto">) => {
+  useEffect(() => {
+    Promise.all([
+      api.get('/customers').catch(() => []),
+      api.get('/credit-sales').catch(() => [])
+    ])
+    .then(([fetchedCustomers, fetchedSales]) => {
+      setCustomers(fetchedCustomers || []);
+      setCreditSales(fetchedSales || []);
+    })
+    .finally(() => setIsLoading(false));
+  }, []);
+
+  const addCustomer = useCallback(async (data: Omit<Customer, "id" | "valor_em_aberto">) => {
+    const tempId = `c${Date.now()}`;
     const newCustomer: Customer = {
       ...data,
-      id: `c${Date.now()}`,
+      id: tempId,
       valor_em_aberto: 0,
     };
+    
+    // Optimistic update
     setCustomers((prev) => [...prev, newCustomer]);
+    
+    try {
+        const res = await api.post('/customers', newCustomer);
+        if (res.id && res.id !== tempId) {
+            setCustomers((prev) => prev.map(c => c.id === tempId ? { ...c, id: res.id } : c));
+            newCustomer.id = res.id;
+        }
+    } catch (e) {
+        console.error("Failed to save customer to DB", e);
+    }
+    
     return newCustomer;
   }, []);
 
@@ -95,58 +109,72 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
   const checkCreditAvailable = useCallback((customerId: string, amount: number) => {
     const customer = customers.find((c) => c.id === customerId);
     if (!customer) return { available: false, limite: 0, emAberto: 0, disponivel: 0 };
-    const disponivel = customer.limite_credito - customer.valor_em_aberto;
+    const disponivel = Number(customer.limite_credito) - Number(customer.valor_em_aberto);
     return {
       available: amount <= disponivel,
-      limite: customer.limite_credito,
-      emAberto: customer.valor_em_aberto,
+      limite: Number(customer.limite_credito),
+      emAberto: Number(customer.valor_em_aberto),
       disponivel,
     };
   }, [customers]);
 
-  const addCreditSale = useCallback((data: Omit<CreditSale, "id" | "date" | "dueDate" | "status">) => {
+  const addCreditSale = useCallback(async (data: Omit<CreditSale, "id" | "date" | "dueDate" | "status">) => {
     const now = new Date();
     const due = new Date(now);
     due.setDate(due.getDate() + 30);
 
+    const tempId = `cs${Date.now()}`;
     const sale: CreditSale = {
       ...data,
-      id: `cs${Date.now()}`,
+      id: tempId,
       date: now.toISOString().split("T")[0],
       dueDate: due.toISOString().split("T")[0],
       status: "pendente",
     };
 
+    // Optimistic update
     setCreditSales((prev) => [...prev, sale]);
     setCustomers((prev) =>
       prev.map((c) =>
         c.id === data.customerId
-          ? { ...c, valor_em_aberto: c.valor_em_aberto + data.amount }
+          ? { ...c, valor_em_aberto: Number(c.valor_em_aberto) + Number(data.amount) }
           : c
       )
     );
+    
+    try {
+        const res = await api.post('/credit-sales', sale);
+        if (res.id && res.id !== tempId) {
+            sale.id = res.id;
+            setCreditSales((prev) => prev.map(s => s.id === tempId ? { ...s, id: res.id } : s));
+        }
+    } catch (e) {
+        console.error("Failed to save credit sale to DB", e);
+    }
+
     return sale;
   }, []);
 
-  const receiveSalePayment = useCallback((saleId: string, paymentMethod: string) => {
-    setCreditSales((prev) => {
-      const sale = prev.find((s) => s.id === saleId);
-      if (sale) {
+  const receiveSalePayment = useCallback(async (saleId: string, paymentMethod: string) => {
+    // Optimistic update
+    const sale = creditSales.find((s) => s.id === saleId);
+    if (sale) {
         setCustomers((prevC) =>
           prevC.map((c) =>
             c.id === sale.customerId
-              ? { ...c, valor_em_aberto: Math.max(0, c.valor_em_aberto - sale.amount) }
+              ? { ...c, valor_em_aberto: Math.max(0, Number(c.valor_em_aberto) - Number(sale.amount)) }
               : c
           )
         );
-      }
-      return prev.map((s) =>
-        s.id === saleId
-          ? { ...s, status: "pago" as const, paymentMethod, paidAt: new Date().toISOString() }
-          : s
-      );
-    });
-  }, []);
+    }
+    setCreditSales((prev) => prev.map((s) => s.id === saleId ? { ...s, status: "pago" as const, paymentMethod, paidAt: new Date().toISOString() } : s));
+
+    try {
+        await api.post(`/credit-sales/${saleId}/pay`, { paymentMethod });
+    } catch (e) {
+        console.error("Failed to register payment in DB", e);
+    }
+  }, [creditSales]);
 
   const logAdminAction = useCallback((adminId: string, action: string, details: string) => {
     setAdminLogs((prev) => [
@@ -155,12 +183,22 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
     ]);
   }, []);
 
-  const updateCustomerLimit = useCallback((customerId: string, newLimit: number, adminId: string) => {
+  const updateCustomerLimit = useCallback(async (customerId: string, newLimit: number, adminId: string) => {
+    // Optimistic update
     setCustomers((prev) =>
       prev.map((c) => (c.id === customerId ? { ...c, limite_credito: newLimit } : c))
     );
     logAdminAction(adminId, "Alteração de limite", `Limite alterado para R$ ${newLimit.toFixed(2)} - Cliente: ${customerId}`);
-  }, [logAdminAction]);
+    
+    try {
+        const customer = customers.find((c) => c.id === customerId);
+        if (customer) {
+            await api.post('/customers', { ...customer, limite_credito: newLimit });
+        }
+    } catch (e) {
+        console.error("Failed to update limit in DB", e);
+    }
+  }, [customers, logAdminAction]);
 
   return (
     <CustomerContext.Provider
@@ -168,7 +206,7 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
         customers, creditSales, adminLogs,
         addCustomer, getCustomer, getCreditoDisponivel,
         addCreditSale, receiveSalePayment, updateCustomerLimit,
-        logAdminAction, checkCreditAvailable,
+        logAdminAction, checkCreditAvailable, isLoading
       }}
     >
       {children}

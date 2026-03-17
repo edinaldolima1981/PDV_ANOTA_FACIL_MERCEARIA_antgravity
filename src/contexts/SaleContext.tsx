@@ -1,5 +1,6 @@
-import { useState, createContext, useContext, useCallback, type ReactNode } from "react";
+import { useState, useEffect, createContext, useContext, useCallback, type ReactNode } from "react";
 import type { CartItem } from "@/data/products";
+import { api } from "@/lib/api";
 
 export interface Sale {
     id: string;
@@ -15,31 +16,46 @@ export interface Sale {
 
 interface SaleContextType {
     sales: Sale[];
-    addSale: (sale: Omit<Sale, "id" | "timestamp">) => Sale;
+    addSale: (sale: Omit<Sale, "id" | "timestamp">) => Promise<Sale>;
     getSalesByDate: (date: string) => Sale[];
     getSalesByRange: (start: string, end: string) => Sale[];
     getSalesByOperator: (operatorId: string) => Sale[];
+    isLoading: boolean;
 }
 
 const SaleContext = createContext<SaleContextType | undefined>(undefined);
 
-// Initial mock data if needed for display
-const INITIAL_SALES: Sale[] = [];
-
 export const SaleProvider = ({ children }: { children: ReactNode }) => {
-    const [sales, setSales] = useState<Sale[]>(INITIAL_SALES);
+    const [sales, setSales] = useState<Sale[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const addSale = useCallback((data: Omit<Sale, "id" | "timestamp">) => {
+    useEffect(() => {
+        api.get('/sales')
+            .then(data => setSales(data || []))
+            .catch(err => console.error("Failed to load sales history from DB", err))
+            .finally(() => setIsLoading(false));
+    }, []);
+
+    const addSale = useCallback(async (data: Omit<Sale, "id" | "timestamp">) => {
+        const tempId = `sale-${Date.now()}`;
         const newSale: Sale = {
             ...data,
-            id: `sale-${Date.now()}`,
+            id: tempId,
             timestamp: new Date().toISOString(),
         };
+        
+        // Optimistic UI update
         setSales((prev) => [newSale, ...prev]);
 
-        // In a real app, this would persist to a database or localStorage
-        const savedSales = JSON.parse(localStorage.getItem("sales_history") || "[]");
-        localStorage.setItem("sales_history", JSON.stringify([newSale, ...savedSales]));
+        try {
+            const res = await api.post('/sales', newSale);
+            if (res.id && res.id !== tempId) {
+                newSale.id = res.id;
+                setSales((prev) => prev.map(s => s.id === tempId ? { ...s, id: res.id } : s));
+            }
+        } catch (e) {
+            console.error("Failed to save sale to DB", e);
+        }
 
         return newSale;
     }, []);
@@ -61,20 +77,8 @@ export const SaleProvider = ({ children }: { children: ReactNode }) => {
         return sales.filter((s) => s.operatorId === operatorId);
     }, [sales]);
 
-    // Load from localStorage on mount
-    useState(() => {
-        const saved = localStorage.getItem("sales_history");
-        if (saved) {
-            try {
-                setSales(JSON.parse(saved));
-            } catch (e) {
-                console.error("Failed to load sales history", e);
-            }
-        }
-    });
-
     return (
-        <SaleContext.Provider value={{ sales, addSale, getSalesByDate, getSalesByRange, getSalesByOperator }}>
+        <SaleContext.Provider value={{ sales, addSale, getSalesByDate, getSalesByRange, getSalesByOperator, isLoading }}>
             {children}
         </SaleContext.Provider>
     );

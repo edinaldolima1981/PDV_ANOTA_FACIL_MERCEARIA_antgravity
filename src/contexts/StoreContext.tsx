@@ -1,4 +1,5 @@
-import { useState, createContext, useContext, useCallback, type ReactNode } from "react";
+import { useState, useEffect, createContext, useContext, useCallback, type ReactNode } from "react";
+import { api } from "@/lib/api";
 
 export type PixKeyType = "cpf" | "cnpj" | "email" | "telefone" | "aleatoria" | "";
 
@@ -17,6 +18,7 @@ interface StoreContextType extends StoreSettings {
   updateStore: (data: Partial<StoreSettings>) => void;
   setPixKey: (key: string) => void;
   pixKeyFormatted: string;
+  isLoading: boolean;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -24,17 +26,11 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 function detectPixKeyType(key: string): PixKeyType {
   const clean = key.replace(/[\s.\-/()]/g, "");
   if (!clean) return "";
-  // Email
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(key.trim())) return "email";
-  // CPF: 11 digits (not starting with +)
   if (/^\d{11}$/.test(clean) && !clean.startsWith("+")) return "cpf";
-  // CNPJ: 14 digits
   if (/^\d{14}$/.test(clean)) return "cnpj";
-  // Phone: starts with + or has 10-13 digits
   if (/^\+?\d{10,13}$/.test(clean)) return "telefone";
-  // Random key (UUID-like or 32+ chars)
   if (/^[a-f0-9-]{32,}$/i.test(clean)) return "aleatoria";
-  // Fallback: if all digits
   if (/^\d+$/.test(clean)) {
     if (clean.length === 11) return "cpf";
     if (clean.length === 14) return "cnpj";
@@ -72,31 +68,57 @@ const PIX_TYPE_LABELS: Record<PixKeyType, string> = {
 
 export { PIX_TYPE_LABELS };
 
+const DEFAULT_SETTINGS: StoreSettings = {
+  storeName: "Empório Orgânico",
+  storeCnpj: "12.345.678/0001-90",
+  storeAddress: "Rua das Flores, 123 - Centro",
+  storeHours: "08:00 - 22:00",
+  storePhone: "(11) 3333-4444",
+  ownerName: "",
+  pixKey: "95193258300",
+  pixKeyType: "cpf",
+};
+
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
-  const [settings, setSettings] = useState<StoreSettings>({
-    storeName: "Empório Orgânico",
-    storeCnpj: "12.345.678/0001-90",
-    storeAddress: "Rua das Flores, 123 - Centro",
-    storeHours: "08:00 - 22:00",
-    storePhone: "(11) 3333-4444",
-    ownerName: "",
-    pixKey: "95193258300",
-    pixKeyType: "cpf",
-  });
+  const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const updateStore = useCallback((data: Partial<StoreSettings>) => {
-    setSettings((prev) => ({ ...prev, ...data }));
+  useEffect(() => {
+    api.get('/store')
+      .then(data => {
+        if (data && Object.keys(data).length > 0) {
+            setSettings(data);
+        }
+      })
+      .catch(err => console.error("Failed to fetch store settings:", err))
+      .finally(() => setIsLoading(false));
   }, []);
 
-  const setPixKey = useCallback((key: string) => {
+  const updateStore = useCallback(async (data: Partial<StoreSettings>) => {
+    const newSettings = { ...settings, ...data };
+    setSettings(newSettings);
+    try {
+        await api.post('/store', newSettings);
+    } catch (e) {
+        console.error("Failed to save store settings", e);
+    }
+  }, [settings]);
+
+  const setPixKey = useCallback(async (key: string) => {
     const type = detectPixKeyType(key);
-    setSettings((prev) => ({ ...prev, pixKey: key, pixKeyType: type }));
-  }, []);
+    const newSettings = { ...settings, pixKey: key, pixKeyType: type };
+    setSettings(newSettings);
+    try {
+        await api.post('/store', newSettings);
+    } catch (e) {
+         console.error("Failed to save pix key", e);
+    }
+  }, [settings]);
 
   const pixKeyFormatted = formatPixKey(settings.pixKey, settings.pixKeyType);
 
   return (
-    <StoreContext.Provider value={{ ...settings, updateStore, setPixKey, pixKeyFormatted }}>
+    <StoreContext.Provider value={{ ...settings, updateStore, setPixKey, pixKeyFormatted, isLoading }}>
       {children}
     </StoreContext.Provider>
   );

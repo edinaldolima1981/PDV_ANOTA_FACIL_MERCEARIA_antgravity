@@ -1,14 +1,16 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Store, Delete, ShieldCheck, User } from "lucide-react";
+import { Store, Delete, ShieldCheck, User, LayoutDashboard } from "lucide-react";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSysAdmin } from "@/contexts/SysAdminContext";
 
 const ADMIN_PIN = "1234";
 const EMPLOYEE_PIN = "0000";
+const SYSADMIN_PIN = "9999";
 
-type UserRole = "admin" | "employee" | null;
+type UserRole = "admin" | "employee" | "sysadmin" | null;
 
 const LoginPin = () => {
   const [pin, setPin] = useState("");
@@ -16,7 +18,8 @@ const LoginPin = () => {
   const [success, setSuccess] = useState<UserRole>(null);
   const navigate = useNavigate();
   const { storeName } = useStore();
-  const { login } = useAuth();
+  const { login: authLogin } = useAuth();
+  const { login: sysAdminLogin } = useSysAdmin();
 
   const handleDigit = useCallback((digit: string) => {
     if (pin.length >= 4) return;
@@ -27,12 +30,20 @@ const LoginPin = () => {
     if (newPin.length === 4) {
       if (newPin === ADMIN_PIN) {
         setSuccess("admin");
-        login("admin-01", "Administrador", "admin");
+        authLogin("admin-01", "Administrador", "admin");
         setTimeout(() => navigate("/home"), 800);
       } else if (newPin === EMPLOYEE_PIN) {
         setSuccess("employee");
-        login("op-01", "Operador 1", "operador");
+        authLogin("op-01", "Operador 1", "operador");
         setTimeout(() => navigate("/home"), 800);
+      } else if (newPin === SYSADMIN_PIN) {
+        if (sysAdminLogin(SYSADMIN_PIN)) {
+          setSuccess("sysadmin");
+          setTimeout(() => navigate("/sysadmin/painel"), 800);
+        } else {
+          setError(true);
+          setTimeout(() => { setPin(""); setError(false); }, 600);
+        }
       } else {
         setError(true);
         setTimeout(() => {
@@ -41,7 +52,7 @@ const LoginPin = () => {
         }, 600);
       }
     }
-  }, [pin, navigate, login]);
+  }, [pin, navigate, authLogin, sysAdminLogin]);
 
   const handleDelete = useCallback(() => {
     setPin((prev) => prev.slice(0, -1));
@@ -76,10 +87,10 @@ const LoginPin = () => {
           <div
             key={i}
             className={`w-3.5 h-3.5 rounded-full transition-all duration-200 ${i < pin.length
-                ? success
-                  ? "bg-success scale-110"
-                  : "bg-primary scale-110"
-                : "bg-border"
+              ? success
+                ? "bg-success scale-110"
+                : "bg-primary scale-110"
+              : "bg-border"
               } ${i < pin.length ? "animate-pin-pop" : ""}`}
           />
         ))}
@@ -90,11 +101,13 @@ const LoginPin = () => {
         <div className="animate-fade-up flex items-center gap-2 mb-4 px-4 py-2 rounded-lg bg-success/10">
           {success === "admin" ? (
             <ShieldCheck className="w-4 h-4 text-success" />
+          ) : success === "sysadmin" ? (
+            <LayoutDashboard className="w-4 h-4 text-success" />
           ) : (
             <User className="w-4 h-4 text-success" />
           )}
           <span className="text-sm font-medium text-success font-body">
-            {success === "admin" ? "Administrador" : "Colaborador"}
+            {success === "admin" ? "Administrador da Loja" : success === "sysadmin" ? "Dono do Sistema" : "Colaborador"}
           </span>
         </div>
       )}
@@ -150,9 +163,14 @@ const LoginPin = () => {
       </div>
 
       {/* Hint */}
-      <p className="text-muted-foreground text-xs text-center font-body max-w-[240px]">
-        Digite seu PIN de 4 dígitos para acessar o sistema
-      </p>
+      <div className="text-muted-foreground text-[11px] text-center font-body max-w-[280px] bg-muted/30 p-3 rounded-xl border border-border">
+        <p className="mb-1.5 font-medium text-foreground/80">Opções de Acesso:</p>
+        <div className="flex flex-col gap-1 opacity-80">
+          <p><strong>Dono do Estabelecimento:</strong> PIN 1234</p>
+          <p><strong>Colaborador:</strong> PIN 0000</p>
+          <p className="text-primary mt-1"><strong>👑 Dono do Sistema:</strong> PIN 9999</p>
+        </div>
+      </div>
     </div>
   );
 };
