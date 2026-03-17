@@ -55,6 +55,9 @@ export const SaleProvider = ({ children }: { children: ReactNode }) => {
             }
         } catch (e) {
             console.error("Failed to save sale to DB", e);
+            // Rollback optimistic update
+            setSales((prev) => prev.filter(s => s.id !== tempId));
+            throw e;
         }
 
         return newSale;

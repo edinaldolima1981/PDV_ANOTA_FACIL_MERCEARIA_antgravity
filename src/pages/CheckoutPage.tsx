@@ -117,14 +117,18 @@ const CheckoutPage = () => {
             paymentMethod: selectedMethod,
             customerName: selectedCustomer?.name,
             totalPrice: totalPrice,
-            items: items,
+            items: [...items],
           }
         });
         // Clear cart after navigating so receipt page can read state
         clearCart();
-    } catch (error) {
+        setSelectedCustomer(null);
+    } catch (error: any) {
         console.error("Erro ao finalizar venda", error);
-        alert("Erro ao finalizar venda. Verifique a conexão com o banco de dados.");
+        toast.error("Erro ao cadastrar venda no banco de dados!", {
+          description: error.message || "Verifique se a conexão com o servidor está ativa.",
+          duration: 10000,
+        });
     } finally {
         setProcessing(false);
     }

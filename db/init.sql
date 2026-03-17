@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS products (
     price DECIMAL(10,2) NOT NULL,
     image TEXT,
     category VARCHAR(50),
-    stock INT DEFAULT 0,
+    stock DECIMAL(10,3) DEFAULT 0,
     unit VARCHAR(10) DEFAULT 'un',
     codigo_barras VARCHAR(100),
     FOREIGN KEY (category) REFERENCES categories(id) ON DELETE SET NULL
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS sale_items (
     productId VARCHAR(50) NOT NULL,
     productName VARCHAR(255) NOT NULL,
     price DECIMAL(10,2) NOT NULL,
-    quantity INT NOT NULL,
+    quantity DECIMAL(10,3) NOT NULL,
     FOREIGN KEY (saleId) REFERENCES sales(id) ON DELETE CASCADE,
     FOREIGN KEY (productId) REFERENCES products(id) ON DELETE NO ACTION
 );

@@ -101,6 +101,9 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
         }
     } catch (e) {
         console.error("Failed to save customer to DB", e);
+        // Rollback
+        setCustomers((prev) => prev.filter(c => c.id !== tempId));
+        throw e;
     }
     
     return newCustomer;
@@ -160,6 +163,16 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
         }
     } catch (e) {
         console.error("Failed to save credit sale to DB", e);
+        // Rollback
+        setCreditSales((prev) => prev.filter(s => s.id !== tempId));
+        setCustomers((prev) =>
+          prev.map((c) =>
+            c.id === data.customerId
+              ? { ...c, valor_em_aberto: Number(c.valor_em_aberto) - Number(data.amount) }
+              : c
+          )
+        );
+        throw e;
     }
 
     return sale;
@@ -183,6 +196,8 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
         await api.post(`/credit-sales/${saleId}/pay`, { paymentMethod });
     } catch (e) {
         console.error("Failed to register payment in DB", e);
+        // Rollback optimistic update if possible (though complex here, throwing is key)
+        throw e;
     }
   }, [creditSales]);
 

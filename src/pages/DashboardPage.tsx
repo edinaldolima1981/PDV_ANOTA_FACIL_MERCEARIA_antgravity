@@ -1,40 +1,82 @@
 import { TrendingUp, DollarSign, ShoppingBag, Users, BarChart3 } from "lucide-react";
 import PosLayout from "@/components/pdv/PosLayout";
+import { useSales } from "@/contexts/SaleContext";
+import { useMemo } from "react";
 
-const MOCK_STATS = {
-  totalToday: 1847.50,
-  totalWeek: 8932.00,
-  ticketMedio: 42.30,
-  totalSales: 44,
-  topProducts: [
-    { name: "Banana Orgânica", qty: "23.5 kg", revenue: 162.15 },
-    { name: "Queijo Minas Frescal", qty: "8.2 kg", revenue: 237.00 },
-    { name: "Suco de Laranja", qty: "15 L", revenue: 180.00 },
-    { name: "Granola Artesanal", qty: "6.8 kg", revenue: 153.00 },
-    { name: "Pão Integral", qty: "12 un", revenue: 138.00 },
-  ],
-  hourlyData: [
-    { hour: "08h", value: 120 },
-    { hour: "09h", value: 280 },
-    { hour: "10h", value: 350 },
-    { hour: "11h", value: 420 },
-    { hour: "12h", value: 310 },
-    { hour: "13h", value: 180 },
-    { hour: "14h", value: 220 },
-    { hour: "15h", value: 290 },
-    { hour: "16h", value: 380 },
-    { hour: "17h", value: 450 },
-  ],
-};
-
-const maxHourly = Math.max(...MOCK_STATS.hourlyData.map((d) => d.value));
+const fmt = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
 
 const DashboardPage = () => {
+  const { sales } = useSales();
+
+  const stats = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+    const todaySales = sales.filter(s => s.timestamp.startsWith(today));
+    const totalToday = todaySales.reduce((acc, s) => acc + s.total, 0);
+
+    // Last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const weekSales = sales.filter(s => new Date(s.timestamp) >= sevenDaysAgo);
+    const totalWeek = weekSales.reduce((acc, s) => acc + s.total, 0);
+
+    const ticketMedio = sales.length > 0 ? sales.reduce((acc, s) => acc + s.total, 0) / sales.length : 0;
+
+    // Hourly data for today
+    const hourlyMap: Record<string, number> = {};
+    for (let i = 8; i <= 20; i++) {
+        hourlyMap[`${String(i).padStart(2, '0')}h`] = 0;
+    }
+    
+    todaySales.forEach(s => {
+        const hour = new Date(s.timestamp).getHours();
+        const key = `${String(hour).padStart(2, '0')}h`;
+        if (hourlyMap[key] !== undefined) {
+            hourlyMap[key] += s.total;
+        }
+    });
+
+    const hourlyData = Object.entries(hourlyMap).map(([hour, value]) => ({ hour, value }));
+
+    // Top products (simplified from sales items)
+    const productMap: Record<string, { name: string, qty: number, revenue: number, unit: string }> = {};
+    sales.forEach(s => {
+        if (s.items) {
+            s.items.forEach(item => {
+                if (!productMap[item.product.id]) {
+                    productMap[item.product.id] = { 
+                        name: item.product.name, 
+                        qty: 0, 
+                        revenue: 0, 
+                        unit: item.product.unit 
+                    };
+                }
+                productMap[item.product.id].qty += item.quantity;
+                productMap[item.product.id].revenue += item.product.price * item.quantity;
+            });
+        }
+    });
+
+    const topProducts = Object.values(productMap)
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 5);
+
+    return {
+      totalToday,
+      totalWeek,
+      ticketMedio,
+      totalSales: sales.length,
+      hourlyData,
+      topProducts
+    };
+  }, [sales]);
+
+  const maxHourly = Math.max(...stats.hourlyData.map((d) => d.value), 1);
+
   const statCards = [
-    { label: "Vendas Hoje", value: `R$ ${MOCK_STATS.totalToday.toFixed(2).replace(".", ",")}`, icon: DollarSign, accent: true },
-    { label: "Vendas Semana", value: `R$ ${MOCK_STATS.totalWeek.toFixed(2).replace(".", ",")}`, icon: TrendingUp, accent: false },
-    { label: "Ticket Médio", value: `R$ ${MOCK_STATS.ticketMedio.toFixed(2).replace(".", ",")}`, icon: ShoppingBag, accent: false },
-    { label: "Nº de Vendas", value: String(MOCK_STATS.totalSales), icon: Users, accent: false },
+    { label: "Vendas Hoje", value: fmt(stats.totalToday), icon: DollarSign, accent: true },
+    { label: "Vendas Semana", value: fmt(stats.totalWeek), icon: TrendingUp, accent: false },
+    { label: "Ticket Médio", value: fmt(stats.ticketMedio), icon: ShoppingBag, accent: false },
+    { label: "Nº de Vendas", value: String(stats.totalSales), icon: Users, accent: false },
   ];
 
   return (
@@ -83,14 +125,14 @@ const DashboardPage = () => {
                 </div>
               </div>
               <div className="flex items-end gap-2.5 h-40">
-                {MOCK_STATS.hourlyData.map((d) => (
+                {stats.hourlyData.map((d) => (
                   <div key={d.hour} className="flex-1 flex flex-col items-center gap-2">
                     <div
                       className="w-full rounded-lg bg-primary/10 hover:bg-primary transition-all duration-300 relative group cursor-pointer"
                       style={{ height: `${(d.value / maxHourly) * 100}%`, minHeight: 6 }}
                     >
                       <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-sidebar text-sidebar-foreground text-[10px] font-bold px-2 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-medium whitespace-nowrap z-20">
-                        R$ {d.value}
+                        {fmt(d.value)}
                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-sidebar rotate-45" />
                       </div>
                     </div>
@@ -104,18 +146,20 @@ const DashboardPage = () => {
             <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-soft">
               <p className="text-[14px] font-bold text-foreground font-body mb-6">Top 5 - Mais Vendidos</p>
               <div className="space-y-4">
-                {MOCK_STATS.topProducts.map((p, i) => (
+                {stats.topProducts.map((p, i) => (
                   <div key={p.name} className="flex items-center gap-4 group cursor-default">
                     <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary text-xs font-black flex items-center justify-center font-body transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                       {i + 1}
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[14px] font-bold text-foreground font-body truncate leading-none mb-1">{p.name}</p>
-                      <p className="text-[11px] text-muted-foreground font-medium font-body leading-none">{p.qty}</p>
+                      <p className="text-[11px] text-muted-foreground font-medium font-body leading-none">
+                        {p.qty} {p.unit}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="text-[14px] font-black text-foreground font-body">
-                        R$ {p.revenue.toFixed(2).replace(".", ",")}
+                        {fmt(p.revenue)}
                       </p>
                       <div className="w-16 h-1 rounded-full bg-muted/40 mt-1 overflow-hidden">
                         <div className="h-full bg-primary" style={{ width: `${100 - (i * 15)}%` }} />
@@ -123,6 +167,9 @@ const DashboardPage = () => {
                     </div>
                   </div>
                 ))}
+                {stats.topProducts.length === 0 && (
+                  <p className="text-sm text-center text-muted-foreground py-10">Nenhuma venda registrada ainda.</p>
+                )}
               </div>
             </div>
           </div>

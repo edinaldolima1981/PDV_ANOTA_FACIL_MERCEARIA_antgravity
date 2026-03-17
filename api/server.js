@@ -242,10 +242,14 @@ app.post('/api/sales', async (req, res) => {
         await connection.beginTransaction();
         
         try {
+            // Migrations automáticas (DECIMAL para suportar KG)
+            await connection.query('ALTER TABLE products MODIFY COLUMN stock DECIMAL(10,3) NOT NULL DEFAULT 0');
+            await connection.query('ALTER TABLE sale_items MODIFY COLUMN quantity DECIMAL(10,3) NOT NULL DEFAULT 0');
+
             // Insert Sale
             await connection.query(
                 'INSERT INTO sales (id, total, paymentMethod, operatorId, operatorName, customerId, customerName) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [id, total, paymentMethod, operatorId, operatorName, customerId, customerName]
+                [id, total, paymentMethod, operatorId, operatorName, customerId || null, customerName || null]
             );
             
             // Insert Items
@@ -268,13 +272,15 @@ app.post('/api/sales', async (req, res) => {
             res.json({ success: true, id });
         } catch (err) {
             await connection.rollback();
+            console.error('Database transaction error:', err);
             throw err;
         } finally {
             connection.release();
         }
         
     } catch (error) {
-         res.status(500).json({ error: error.message });
+        console.error('Error recording sale:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
