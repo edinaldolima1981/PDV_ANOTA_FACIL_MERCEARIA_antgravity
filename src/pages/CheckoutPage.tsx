@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import CustomerSelectModal from "@/components/pdv/CustomerSelectModal";
 import AdminAuthModal from "@/components/pdv/AdminAuthModal";
 import { QRCodeSVG } from "qrcode.react";
+import { toast } from "sonner";
 
 const PAYMENT_METHODS = [
   { id: "dinheiro", label: "Dinheiro", icon: Banknote, description: "Pagamento em espécie" },
