@@ -65,9 +65,19 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
       api.get('/customers').catch(() => []),
       api.get('/credit-sales').catch(() => [])
     ])
-    .then(([fetchedCustomers, fetchedSales]) => {
-      setCustomers(fetchedCustomers || []);
-      setCreditSales(fetchedSales || []);
+    .then(([rawCustomers, rawSales]) => {
+      // MySQL returns DECIMAL as strings — cast to numbers
+      const fetchedCustomers = (rawCustomers || []).map((c: any) => ({
+        ...c,
+        limite_credito: parseFloat(c.limite_credito) || 0,
+        valor_em_aberto: parseFloat(c.valor_em_aberto) || 0,
+      }));
+      const fetchedSales = (rawSales || []).map((s: any) => ({
+        ...s,
+        amount: parseFloat(s.amount) || 0,
+      }));
+      setCustomers(fetchedCustomers);
+      setCreditSales(fetchedSales);
     })
     .finally(() => setIsLoading(false));
   }, []);

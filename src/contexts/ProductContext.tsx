@@ -59,8 +59,14 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
       api.get('/products').catch(() => []),
       api.get('/categories').catch(() => [])
     ])
-    .then(([fetchedProducts, fetchedCategories]) => {
-      setProducts(fetchedProducts || []);
+    .then(([rawProducts, fetchedCategories]) => {
+      // MySQL returns DECIMAL as strings — cast to numbers
+      const fetchedProducts = (rawProducts || []).map((p: any) => ({
+        ...p,
+        price: parseFloat(p.price) || 0,
+        stock: parseInt(p.stock) || 0,
+      }));
+      setProducts(fetchedProducts);
       setCategories(fetchedCategories || []);
     })
     .finally(() => setIsLoading(false));
