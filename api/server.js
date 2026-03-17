@@ -98,6 +98,28 @@ app.get('/api/categories', async (req, res) => {
     }
 });
 
+app.post('/api/categories', async (req, res) => {
+    try {
+        const { id, name, color } = req.body;
+        await pool.query(
+            'INSERT INTO categories (id, name, color) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name), color=VALUES(color)',
+            [id, name, color]
+        );
+        res.json({ success: true, id });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/categories/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM categories WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- Customers ---
 app.get('/api/customers', async (req, res) => {
     try {

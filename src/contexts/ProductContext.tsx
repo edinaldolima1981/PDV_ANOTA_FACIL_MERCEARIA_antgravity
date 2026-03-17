@@ -85,6 +85,8 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         }
     } catch (e) {
         console.error("Failed to save product to DB", e);
+        alert("Erro ao salvar produto no banco de dados. Verifique se a categoria existe.");
+        setProducts((prev) => prev.filter(p => p.id !== tempId));
     }
   }, []);
 
@@ -97,6 +99,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         }
     } catch (e) {
         console.error("Failed to update product in DB", e);
+        alert("Erro ao atualizar produto no banco de dados.");
     }
   }, [products]);
 
@@ -109,17 +112,34 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const addCategory = useCallback((category: Category) => {
+  const addCategory = useCallback(async (category: Category) => {
     setCategories((prev) => [...prev, category]);
-    // DB categories normally read-only from migration, but UI allows. Assuming local for now if not supported in API fully.
+    try {
+        await api.post('/categories', category);
+    } catch (e) {
+        console.error("Failed to save category to DB", e);
+    }
   }, []);
 
-  const updateCategory = useCallback((id: string, data: Partial<Category>) => {
+  const updateCategory = useCallback(async (id: string, data: Partial<Category>) => {
     setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)));
-  }, []);
+    try {
+        const cat = categories.find(c => c.id === id);
+        if (cat) {
+            await api.post('/categories', { ...cat, ...data });
+        }
+    } catch (e) {
+        console.error("Failed to update category in DB", e);
+    }
+  }, [categories]);
 
-  const deleteCategory = useCallback((id: string) => {
+  const deleteCategory = useCallback(async (id: string) => {
     setCategories((prev) => prev.filter((c) => c.id !== id));
+    try {
+        await api.delete(`/categories/${id}`);
+    } catch (e) {
+        console.error("Failed to delete category from DB", e);
+    }
   }, []);
 
   const addUnit = useCallback((unit: Omit<CustomUnit, "id">) => {

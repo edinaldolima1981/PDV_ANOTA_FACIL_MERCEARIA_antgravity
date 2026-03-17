@@ -89,8 +89,8 @@ const FiadoPage = () => {
         <header className="bg-card border-b border-border px-5 py-4 flex-shrink-0">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h1 className="font-display text-lg font-bold text-foreground">Controle de Fiado</h1>
-              <p className="text-xs text-muted-foreground font-body">{customers.length} clientes</p>
+              <h1 className="font-display text-lg font-bold text-foreground">Relatório de Clientes</h1>
+              <p className="text-xs text-muted-foreground font-body">{customers.length} clientes cadastrados</p>
             </div>
             <Button size="sm" className="rounded-lg gap-1.5" onClick={() => setShowNewForm(true)}>
               <Plus className="w-4 h-4" />
@@ -101,7 +101,7 @@ const FiadoPage = () => {
           {/* Total card */}
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-3 flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground font-body">Total em aberto</p>
+              <p className="text-xs text-muted-foreground font-body">Saldo Total em Aberto (Fiado)</p>
               <p className="text-xl font-bold text-primary font-display">{fmt(totalFiado)}</p>
             </div>
             <AlertCircle className="w-5 h-5 text-primary/50" />

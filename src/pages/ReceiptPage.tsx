@@ -153,8 +153,8 @@ const ReceiptPage = () => {
           </span>
         </div>
 
-        {/* QR Code Pix */}
-        {pixKey && (
+        {/* QR Code Pix - Show ONLY if payment method is Pix */}
+        {pixKey && paymentMethod === "pix" && (
           <div className="px-5 pb-5 flex flex-col items-center">
             <QRCodeSVG
               value={`00020126330014BR.GOV.BCB.PIX0111${pixKey.replace(/[\s.\-/()]/g, "")}5204000053039865404${totalPrice.toFixed(2)}5802BR5913${storeName.slice(0, 25)}6009SAO PAULO62070503***6304`}

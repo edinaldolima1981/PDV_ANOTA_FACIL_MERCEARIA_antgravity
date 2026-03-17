@@ -4,7 +4,7 @@ import { Store, ShoppingCart, Package, Users, BarChart3, Settings, LogOut, Recei
 const NAV_ITEMS = [
   { path: "/home", label: "Vendas", icon: ShoppingCart },
   { path: "/stock", label: "Estoque", icon: Package },
-  { path: "/fiado", label: "Fiado", icon: Users },
+  { path: "/fiado", label: "Clientes", icon: Users },
   { path: "/contas-receber", label: "A Prazo", icon: Receipt },
   { path: "/reports", label: "Relatórios", icon: BarChart3 },
   { path: "/admin", label: "Config", icon: Settings },
