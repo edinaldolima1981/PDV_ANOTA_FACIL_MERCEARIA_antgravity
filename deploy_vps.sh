@@ -11,9 +11,15 @@ REPO_URL="https://github.com/edinaldolima1981/PDV_ANOTA_FACIL_MERCEARIA_antgravi
 
 echo "--- Iniciando Implantação do PDV via Docker ---"
 
+# 0. Verificar se é root
+if [ "$EUID" -ne 0 ]; then 
+  echo "Erro: Por favor, execute como root (use: sudo bash deploy_vps.sh)"
+  exit 1
+fi
+
 # 1. Atualizar sistema
 echo "-> Atualizando pacotes básicos..."
-apt update
+apt update -qq
 apt install -y curl git apt-transport-https ca-certificates software-properties-common
 
 # 2. Instalar Docker se não existir
@@ -22,16 +28,16 @@ if ! command -v docker &> /dev/null; then
     echo "-> Instalando Docker..."
     curl -fsSL https://get.docker.com -o get-docker.sh
     sh get-docker.sh
-    systemctl enable docker
-    systemctl start docker
+    systemctl enable docker >/dev/null 2>&1
+    systemctl start docker >/dev/null 2>&1
 fi
 
 # 3. Liberar Porta 80
-echo "-> Parando e desativando web servers nativos para liberar a porta 80..."
-systemctl stop nginx || true
-systemctl disable nginx || true
-systemctl stop apache2 || true
-systemctl disable apache2 || true
+echo "-> Verificando se porta 80 está livre..."
+systemctl stop nginx >/dev/null 2>&1 || true
+systemctl disable nginx >/dev/null 2>&1 || true
+systemctl stop apache2 >/dev/null 2>&1 || true
+systemctl disable apache2 >/dev/null 2>&1 || true
 
 # 4. Preparar diretório do site
 echo "-> Preparando diretório $DIRETORIO_SITE..."
