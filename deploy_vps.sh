@@ -32,12 +32,23 @@ if ! command -v docker &> /dev/null; then
     systemctl start docker >/dev/null 2>&1
 fi
 
-# 3. Liberar Porta 80
-echo "-> Verificando se porta 80 está livre..."
+# 3. Liberar Porta 80 (Remoção agressiva de conflitos)
+echo "-> Liberando a porta 80 (removendo Apache/Nginx se existirem)..."
+# Tenta parar e remover pacotes que costumam travar a porta 80
+apt remove -y apache2 apache2-utils nginx nginx-common >/dev/null 2>&1 || true
+apt autoremove -y >/dev/null 2>&1 || true
+
+# Mata qualquer processo que ainda esteja usando a porta 80
+if command -v fuser &> /dev/null; then
+    fuser -k 80/tcp >/dev/null 2>&1 || true
+else
+    apt install -y psmisc >/dev/null 2>&1
+    fuser -k 80/tcp >/dev/null 2>&1 || true
+fi
+
+# Garante que serviços comuns estejam parados
 systemctl stop nginx >/dev/null 2>&1 || true
-systemctl disable nginx >/dev/null 2>&1 || true
 systemctl stop apache2 >/dev/null 2>&1 || true
-systemctl disable apache2 >/dev/null 2>&1 || true
 
 # 4. Preparar diretório do site
 echo "-> Preparando diretório $DIRETORIO_SITE..."
