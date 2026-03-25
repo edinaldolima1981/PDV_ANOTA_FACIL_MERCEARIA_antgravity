@@ -1,18 +1,21 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Store, ShoppingCart, Package, Users, BarChart3, Settings, LogOut, Receipt } from "lucide-react";
-
-const NAV_ITEMS = [
-  { path: "/home", label: "Vendas", icon: ShoppingCart },
-  { path: "/stock", label: "Estoque", icon: Package },
-  { path: "/fiado", label: "Clientes", icon: Users },
-  { path: "/contas-receber", label: "A Prazo", icon: Receipt },
-  { path: "/reports", label: "Relatórios", icon: BarChart3 },
-  { path: "/admin", label: "Config", icon: Settings },
-];
+import { Store, ShoppingCart, Package, Users, BarChart3, Settings, LogOut, Receipt, Utensils } from "lucide-react";
+import { useStore } from "@/contexts/StoreContext";
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { features } = useStore();
+
+  const navItems = [
+    { path: "/home", label: "Vendas", icon: ShoppingCart },
+    ...(features?.restaurant ? [{ path: "/restaurant/dashboard", label: "Restaurante", icon: Utensils }] : []),
+    { path: "/stock", label: "Estoque", icon: Package },
+    { path: "/fiado", label: "Clientes", icon: Users },
+    { path: "/contas-receber", label: "A Prazo", icon: Receipt },
+    { path: "/reports", label: "Relatórios", icon: BarChart3 },
+    { path: "/admin", label: "Config", icon: Settings },
+  ];
 
   return (
     <aside className="hidden md:flex w-[72px] bg-sidebar flex-col items-center py-5 gap-1 border-r border-sidebar-border flex-shrink-0 z-50">
@@ -26,9 +29,9 @@ const Sidebar = () => {
 
       {/* Nav items */}
       <nav className="flex flex-col gap-1 flex-1">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path;
+          const isActive = location.pathname.startsWith(item.path);
 
           return (
             <button

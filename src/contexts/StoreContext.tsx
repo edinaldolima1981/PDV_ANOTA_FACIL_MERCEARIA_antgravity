@@ -12,6 +12,10 @@ interface StoreSettings {
   ownerName: string;
   pixKey: string;
   pixKeyType: PixKeyType;
+  features: {
+    restaurant?: boolean;
+    inventory_advanced?: boolean;
+  };
 }
 
 interface StoreContextType extends StoreSettings {
@@ -77,6 +81,9 @@ const DEFAULT_SETTINGS: StoreSettings = {
   ownerName: "",
   pixKey: "95193258300",
   pixKeyType: "cpf",
+  features: {
+    restaurant: true, // Habilitado por padrão para teste DEV conforme solicitado
+  },
 };
 
 export const StoreProvider = ({ children }: { children: ReactNode }) => {

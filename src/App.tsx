@@ -20,6 +20,10 @@ import ReportsPage from "./pages/ReportsPage";
 import AdminPage from "./pages/AdminPage";
 import ContasReceberPage from "./pages/ContasReceberPage";
 import SuperAdminPanel from "./pages/sysadmin/SuperAdminPanel";
+import RestaurantDashboard from "./pages/restaurant/Dashboard";
+import RestaurantTables from "./pages/restaurant/Tables";
+import RestaurantOrders from "./pages/restaurant/Orders";
+import RestaurantCheckout from "./pages/restaurant/Checkout";
 import NotFound from "./pages/NotFound";
 import { SysAdminProvider } from "./contexts/SysAdminContext";
 
@@ -50,6 +54,13 @@ const App = () => (
                         <Route path="/reports" element={<ReportsPage />} />
                         <Route path="/admin" element={<AdminPage />} />
                         <Route path="/sysadmin/painel" element={<SuperAdminPanel />} />
+                        
+                        {/* Restaurant Module Routes */}
+                        <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
+                        <Route path="/restaurant/tables" element={<RestaurantTables />} />
+                        <Route path="/restaurant/orders" element={<RestaurantOrders />} />
+                        <Route path="/restaurant/checkout" element={<RestaurantCheckout />} />
+
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </BrowserRouter>

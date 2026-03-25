@@ -89,6 +89,7 @@ const AdminPage = () => {
     { id: "loja", icon: Store, label: "Dados da Loja", description: "Nome, endereço e horário" },
     { id: "categorias", icon: Tag, label: "Categorias", description: "Gerenciar categorias de produtos" },
     { id: "cobrancas", icon: Bell, label: "Cobranças Automáticas", description: "Lembretes de pagamento via WhatsApp" },
+    { id: "modulos", icon: Plus, label: "Módulos Adicionais", description: "Ativar Restaurante, Bar e outros" },
     { id: "equipe", icon: Users, label: "Equipe", description: "Gerenciar colaboradores e PINs" },
     { id: "permissoes", icon: Shield, label: "Permissões e Limites", description: "Limites de crédito dos clientes" },
   ];
@@ -344,6 +345,41 @@ const AdminPage = () => {
 
       {activeSection === "cobrancas" && (
         <ReminderSettingsModal onClose={() => setActiveSection(null)} />
+      )}
+
+      {activeSection === "modulos" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm" onClick={() => setActiveSection(null)}>
+          <div className="bg-card w-full max-w-md rounded-2xl p-6 shadow-elevated animate-fade-up mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-display text-lg font-bold text-foreground">Módulos Opcionais</h3>
+              <button onClick={() => setActiveSection(null)} className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+            
+            <div className="space-y-4 mb-8">
+              <div className="flex items-center justify-between p-4 bg-background rounded-xl border border-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Store className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Restaurante e Bar</p>
+                    <p className="text-[11px] text-muted-foreground">Mesas, Comandas e Delivery</p>
+                  </div>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={store.features?.restaurant} 
+                  onChange={(e) => store.updateStore({ features: { ...store.features, restaurant: e.target.checked } })}
+                  className="w-5 h-5 accent-primary cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <Button className="w-full rounded-xl" onClick={() => setActiveSection(null)}>Fechar</Button>
+          </div>
+        </div>
       )}
 
       {showAdminAuth && (
