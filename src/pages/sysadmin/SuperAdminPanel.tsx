@@ -19,6 +19,7 @@ const SuperAdminPanel = () => {
     const [ownerName, setOwnerName] = useState("");
     const [ownerPhone, setOwnerPhone] = useState("");
     const [dueDate, setDueDate] = useState("");
+    const [featureRestaurant, setFeatureRestaurant] = useState(false);
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -40,6 +41,7 @@ const SuperAdminPanel = () => {
         setOwnerName("");
         setOwnerPhone("");
         setDueDate("");
+        setFeatureRestaurant(false);
         setIsModalOpen(true);
     };
 
@@ -52,16 +54,19 @@ const SuperAdminPanel = () => {
         setOwnerName(store.ownerName);
         setOwnerPhone(store.ownerPhone || "");
         setDueDate(store.dueDate || "");
+        setFeatureRestaurant(!!store.features?.restaurant);
         setIsModalOpen(true);
     };
 
     const handleSaveStore = () => {
         if (!name.trim() || !cnpj.trim()) return;
 
+        const storeFeatures = { restaurant: featureRestaurant };
+
         if (editingStore) {
-            updateStore(editingStore.id, { name, cnpj, plan, status, ownerName, ownerPhone, dueDate });
+            updateStore(editingStore.id, { name, cnpj, plan, status, ownerName, ownerPhone, dueDate, features: storeFeatures });
         } else {
-            addStore({ name, cnpj, plan, status, ownerName, ownerPhone, dueDate });
+            addStore({ name, cnpj, plan, status, ownerName, ownerPhone, dueDate, features: storeFeatures });
         }
         setIsModalOpen(false);
     };
@@ -354,6 +359,24 @@ const SuperAdminPanel = () => {
                                         <option value="Inativo">Inativo</option>
                                         <option value="Bloqueado">Bloqueado</option>
                                     </select>
+                                </div>
+                            </div>
+                            
+                            <div className="pt-2 border-t border-border">
+                                <label className="text-sm font-bold text-foreground mb-3 block">Módulos Ativos</label>
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-3 p-3 bg-secondary/30 rounded-xl cursor-pointer hover:bg-secondary/50 transition-colors">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={featureRestaurant}
+                                            onChange={e => setFeatureRestaurant(e.target.checked)}
+                                            className="w-5 h-5 accent-primary"
+                                        />
+                                        <div className="flex items-center gap-2">
+                                            <Store className="w-4 h-4 text-primary" />
+                                            <span className="text-sm font-medium">Restaurante e Bar</span>
+                                        </div>
+                                    </label>
                                 </div>
                             </div>
                         </div>

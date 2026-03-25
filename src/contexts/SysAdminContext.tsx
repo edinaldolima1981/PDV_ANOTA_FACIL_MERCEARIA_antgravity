@@ -9,6 +9,10 @@ export interface SystemStore {
     ownerName: string;
     ownerPhone?: string;
     dueDate?: string;
+    features?: {
+        restaurant?: boolean;
+        inventory_advanced?: boolean;
+    };
     createdAt: string;
 }
 
@@ -35,6 +39,7 @@ const INITIAL_STORES: SystemStore[] = [
         ownerName: "João Silva",
         ownerPhone: "11999999999",
         dueDate: "2026-03-10",
+        features: { restaurant: true },
         createdAt: "2026-01-10T10:00:00Z"
     },
     {
