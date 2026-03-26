@@ -28,6 +28,7 @@ interface StoreContextType extends StoreSettings {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 function detectPixKeyType(key: string): PixKeyType {
+  if (!key) return "";
   const clean = key.replace(/[\s.\-/()]/g, "");
   if (!clean) return "";
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(key.trim())) return "email";
@@ -43,6 +44,7 @@ function detectPixKeyType(key: string): PixKeyType {
 }
 
 function formatPixKey(key: string, type: PixKeyType): string {
+  if (!key) return "";
   const clean = key.replace(/[\s.\-/()]/g, "");
   switch (type) {
     case "cpf":
@@ -94,7 +96,19 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     api.get('/store')
       .then(data => {
         if (data && Object.keys(data).length > 0) {
-            setSettings(data);
+            // Map snake_case from API to camelCase for the frontend
+            const mappedData: StoreSettings = {
+                storeName: data.name || data.storeName || DEFAULT_SETTINGS.storeName,
+                storeCnpj: data.cnpj || data.storeCnpj || DEFAULT_SETTINGS.storeCnpj,
+                storeAddress: data.address || data.storeAddress || DEFAULT_SETTINGS.storeAddress,
+                storePhone: data.phone || data.storePhone || DEFAULT_SETTINGS.storePhone,
+                storeHours: data.hours || data.storeHours || DEFAULT_SETTINGS.storeHours,
+                ownerName: data.owner_name || data.ownerName || DEFAULT_SETTINGS.ownerName,
+                pixKey: data.pix_key || data.pixKey || DEFAULT_SETTINGS.pixKey,
+                pixKeyType: data.pix_key_type || data.pixKeyType || DEFAULT_SETTINGS.pixKeyType,
+                features: data.features || DEFAULT_SETTINGS.features
+            };
+            setSettings(mappedData);
         }
       })
       .catch(err => console.error("Failed to fetch store settings:", err))
