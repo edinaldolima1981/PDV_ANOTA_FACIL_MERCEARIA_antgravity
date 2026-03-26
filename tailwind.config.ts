@@ -53,6 +53,18 @@ export default {
         },
         success: "hsl(var(--success))",
         warning: "hsl(var(--warning))",
+        "surface-container-lowest": "#0b0d14",
+        "surface-container-low": "#1d1f29",
+        "surface-container": "#232631",
+        "surface-container-high": "#2b2e3b",
+        "surface-container-highest": "#333745",
+        "surface-bright": "#3b404f",
+        "on-surface": "#e2e2e9",
+        "on-surface-variant": "#c5c6d0",
+        tertiary: {
+          DEFAULT: "#ffb59c",
+          foreground: "#561f0f",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
