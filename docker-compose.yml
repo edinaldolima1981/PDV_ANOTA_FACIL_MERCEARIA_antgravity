@@ -43,7 +43,7 @@ services:
     container_name: pdvanotafacil-web
     restart: always
     ports:
-      - "80:80"
+      - "3003:80"
     depends_on:
       - pdv-api
 
